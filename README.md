@@ -18,17 +18,17 @@ Oct.18.2023
 
 However, due to the power of the language, some of the syntaxes are not obvious for those first coming into the language. I was actually one such person.
 
-Several months ago, when I first tried out the new **Zig** package manager, it was before [`0.11.0`](https://github.com/ziglang/zig/releases/tag/0.11.0) was officially released. Not only was the language unstable, but also the package manager itself was subject to a lot of stability issues especially with TLS. I had to hack together a system that worked for my need, and I documented my journey in [WTF is Zon](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
+Several months ago, when I first tried out the new **Zig** package manager, it was before [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) was officially released. Not only was the language unstable, but also the package manager itself was subject to a lot of stability issues especially with TLS. I had to hack together a system that worked for my need, and I documented my journey in [WTF is Zon](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
 
 Since then I've had discussion of the **Zig** _package manager_ with [Andrew](https://github.com/andrewrk) and various others through the [Zig Discord](https://discord.com/servers/zig-programming-language-605571803288698900), [Ziggit](https://ziggit.dev), and even a [Github issue](https://github.com/ziglang/zig/issues/16172).
 
-Now that **Zig** has released [`0.11.0`](https://github.com/ziglang/zig/releases/tag/0.11.0) in August 2023, and many of the problems were resolved so I want to revisit my hack to see whether I can do a better _hack_.
+Now that **Zig** has released [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) in August 2023, and many of the problems were resolved so I want to revisit my hack to see whether I can do a better _hack_.
 
 A special shoutout to my friend [InKryption](https://github.com/inkryption), who was tremendously helpful in my understanding of the _package manager_. I wouldn't be able to come up with this better hack without his help.
 
 ## Disclaimer
 
-As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), I changed my typical subtitle of _power and complexity_ to _hack and complexity_ because not only was [`0.11.0`](https://github.com/ziglang/zig/releases/tag/0.11.0) (hence the package manager) not released yet but also I had do a pretty ugly [hack](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e#provide-a-package) to make it work.
+As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), I changed my typical subtitle of _power and complexity_ to _hack and complexity_ because not only was [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) (hence the package manager) not released yet but also I had do a pretty ugly [hack](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e#provide-a-package) to make it work.
 
 I just want to reiterate my stance on **Zig** and the _package manager_. I'm not writing this to discourage you from using it but to set the right expectation and hopefully help you in case you encounter similar issues.
 
@@ -88,19 +88,19 @@ Our concrete example has 3 packages _A_, _B_, and _C_. Our program _my-wtf-proje
 
 The project C will use the **Zig** layer provided by _package B_, which in turn will need the actual [DuckDb](https://duckdb.org) implementation provided by _package A_.
 
-For our `my-wtf-project`, our main program will call the **Zig** library provided by [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb). The [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb) is just a **Zig** wrapper of [`libduckdb`](https://github.com/beachglasslabs/libduckdb) that provides the dynamic library of [`release 0.9.1`](https://github.com/duckdb/duckdb/releases/tag/v0.9.1) of [DuckDb](https://duckdb.org).
+For our `my-wtf-project`, our main program will call the **Zig** library provided by [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb). The [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb) is just a **Zig** wrapper of [libduckdb](https://github.com/beachglasslabs/libduckdb) that provides the dynamic library of [release 0.9.1](https://github.com/duckdb/duckdb/releases/tag/v0.9.1) of [DuckDb](https://duckdb.org).
 
-To use the C -> B -> A example in the earlier section, _program C_ is our project `my-wtf-project`, _package B_ is [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb), and _project A_ is [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
+To use the C -> B -> A example in the earlier section, _program C_ is our project `my-wtf-project`, _package B_ is [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb), and _project A_ is [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
-Note that _package B_ used to be called `duckdb.zig` but it has since been renamed to [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb).
+Note that _package B_ used to be called `duckdb.zig` but it has since been renamed to [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
 ## The Hack
 
-There are two hacks I had to do for the `build.zig` of _package A_([`libduckdb`](https://github.com/beachglasslabs/libduckdb)),
-_package B_([`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)), and _program C_(_my-wtf-project_):
+There are two hacks I had to do for the `build.zig` of _package A_([libduckdb](https://github.com/beachglasslabs/libduckdb)),
+_package B_([zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)), and _program C_(_my-wtf-project_):
 
-1. In the `build.zig` of [`libduckdb`](https://github.com/beachglasslabs/libduckdb), I had to create an _artifact_ even if the `libduckdb.so` is a shared library that doesn't need additional compilation/linking by creating a new static library that is linked to `libduckdb.so` just so I can use the _artifact_ in
-   [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb).
+1. In the `build.zig` of [libduckdb](https://github.com/beachglasslabs/libduckdb), I had to create an _artifact_ even if the `libduckdb.so` is a shared library that doesn't need additional compilation/linking by creating a new static library that is linked to `libduckdb.so` just so I can use the _artifact_ in
+   [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
 2. I had to use `lib.installHeader` to install both the `duckdb.h` and the `libduckdb.so` in all the `build.zig` to copy over these 2 files to `zig-out/include` and `zig-out/lib` respectively.
 
@@ -110,9 +110,9 @@ The [duckdb](https://github.com/duckdb/duckdb) was written in **c++** and the `l
 
 I unzipped the package and placed `duckdb.h` under the `include` directory and `libduckdb.so` under the `lib` directory.
 
-## build.zig.zon of A: [`libduckdb`](https://github.com/beachglasslabs/libduckdb)
+## build.zig.zon of A: [libduckdb](https://github.com/beachglasslabs/libduckdb)
 
-Because [`libduckdb`](https://github.com/beachglasslabs/libduckdb) has no dependencies, the _zon_ file is extremely simple.
+Because [libduckdb](https://github.com/beachglasslabs/libduckdb) has no dependencies, the _zon_ file is extremely simple.
 
 It just lists the name and the version. I've intentionally been using the actual version number of the underlying [DuckDb](https://duckdb.org).
 
@@ -126,7 +126,7 @@ It just lists the name and the version. I've intentionally been using the actual
 }
 ```
 
-## build.zig of A: [`libduckdb`](https://github.com/beachglasslabs/libduckdb)
+## build.zig of A: [libduckdb](https://github.com/beachglasslabs/libduckdb)
 
 This is the first big change from [Part 1](https://github.com/beachglasslabs/libduckdb/blob/57bb5689984c598494b40b91d79cdbe8ed102279/build.zig). We are not building anymore fake artifact. We are only introducing some _modules_ so that any package depending on this package can reference these items using the various _module_ names. This is still a **hack** because technically these items are _artifacts_ not _modules_ but at least we don't have to compile a shared library that doesn't need to be compiled.
 
@@ -141,13 +141,13 @@ pub fn build(b: *std.Build) !void {
 
 This will make more sense in the next sections.
 
-## B: [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)
+## B: [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)
 
-The [`zig-duckdb`](https://github.com/beachglasslabs/duckdb.zig) is still a minimal **Zig** wrapper to [DuckDb](https://duckdb.org). It suits my needs for now and the only changes added since last time are the ability to query for `boolean` and `optional` values.
+The [zig-duckdb](https://github.com/beachglasslabs/duckdb.zig) is still a minimal **Zig** wrapper to [DuckDb](https://duckdb.org). It suits my needs for now and the only changes added since last time are the ability to query for `boolean` and `optional` values.
 
-The big change is that we no longer need to install `libduckdb.so` or `duckdb.h` from [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
+The big change is that we no longer need to install `libduckdb.so` or `duckdb.h` from [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
-## build.zig.zon of B: [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)
+## build.zig.zon of B: [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)
 
 We do have a dependency now as we need to refer to a release of A: [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
@@ -169,15 +169,15 @@ We do have a dependency now as we need to refer to a release of A: [libduckdb](h
 }
 ```
 
-## build.zig of B: [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)
+## build.zig of B: [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)
 
 Note that we no longer _install_ `libduckdb.so` or `duckdb.h` as part of the build process we previous had to do in [Part 1](https://github.com/beachglasslabs/zig-duckdb/blob/8aab6c6029cb8d9e0492f3135f892f10cbd1e3bf/build.zig).
 
-We do have to call `addModule` multiple times to expose not only the library `libduck.a` (the _artifact_ of this package) itself but also _re-export_ the modules provided by [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
+We do have to call `addModule` multiple times to expose not only the library `libduck.a` (the _artifact_ of this package) itself but also _re-export_ the modules provided by [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
 Note how we now call `duck_dep.builder.pathFromRoot(duck_dep.module("libduckdb.include").source_file.path` to access the `include` directory and `duck_dep.builder.pathFromRoot(duck_dep.module("libduckdb.lib").source_file.path)` to access the `lib` directory.
 
-You can think of this as equivalent of reaching inside of [`libduckdb`](https://github.com/beachglasslabs/libduckdb) to access these items and therefore we don't have to copy these items into our output directory anymore as we previously had to do with `lib.installLibraryHeaders(duck_dep.artifact("duckdb"))`.
+You can think of this as equivalent of reaching inside of [libduckdb](https://github.com/beachglasslabs/libduckdb) to access these items and therefore we don't have to copy these items into our output directory anymore as we previously had to do with `lib.installLibraryHeaders(duck_dep.artifact("duckdb"))`.
 
 ```zig
 pub fn build(b: *std.Build) !void {
@@ -277,18 +277,18 @@ In order to run the test, I've added a new _test_ step in build.zig:
     test_step.dependOn(&run_unit_tests.step);
 ```
 
-Once again, you can see that's why I've exposed the `lib` and `include` directories of [`libduckdb`](https://github.com/beachglasslabs/libduckdb) via _module_.
+Once again, you can see that's why I've exposed the `lib` and `include` directories of [libduckdb](https://github.com/beachglasslabs/libduckdb) via _module_.
 I can now call `addIncludePath` and `addLibraryPath` by referencing their modules.
 
-Note the call to `setEnvironmentVariable` because `-L` is only useful for _linking_ not for running the test/program. Hence you need to point to `libduckdb.so` using `LD_LIBRARY_PATH` and once again by accessing the location of the shared library inside the [`libduckdb`](https://github.com/beachglasslabs/libduckdb) package.
+Note the call to `setEnvironmentVariable` because `-L` is only useful for _linking_ not for running the test/program. Hence you need to point to `libduckdb.so` using `LD_LIBRARY_PATH` and once again by accessing the location of the shared library inside the [libduckdb](https://github.com/beachglasslabs/libduckdb) package.
 
 ## C: my-wtf-project
 
-Now to create the executable for our project, we need to link to the packages A [`libduckdb`](https://github.com/beachglasslabs/libduckdb) and B [`duckdb.zig`](https://github.com/beachglasslabs/zig-duckdb).
+Now to create the executable for our project, we need to link to the packages A [libduckdb](https://github.com/beachglasslabs/libduckdb) and B [duckdb.zig](https://github.com/beachglasslabs/zig-duckdb).
 
 ## build.zig.zon of C: my-wtf-project
 
-Our only dependency is the release of B: [`zig-duckdb`](https://github.com/beachglasslabs/duckdb.zig).
+Our only dependency is the release of B: [zig-duckdb](https://github.com/beachglasslabs/duckdb.zig).
 
 ```zig
 // build.zig.zon
@@ -311,7 +311,7 @@ Our only dependency is the release of B: [`zig-duckdb`](https://github.com/beach
 
 ## build.zig of C: my-wtf-project
 
-This is somewhat similar to the `build.zig` of B ([`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)).
+This is somewhat similar to the `build.zig` of B ([zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)).
 
 Note once again that we do not need to call `installLibraryHeaders` to install the `libduckdb.so` and `duckdb.h` anymore.
 
@@ -414,7 +414,7 @@ Leaks detected: false
 
 You can find the code [here](https://github.com/edyu/wtf-zig-zon2).
 
-Here are the code for [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb) and [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
+Here are the code for [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb) and [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
 Special thanks to [@InKryption](https://github.com/inkryption) for helping out on the new hack for the **Zig** package manager!
 
