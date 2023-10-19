@@ -4,7 +4,7 @@
 
     .dependencies = .{
         .duck = .{
-            .url = "https://github.com/beachglasslabs/duckdb.zig/archive/refs/tags/v0.0.5.tar.gz",
+            .url = "https://github.com/beachglasslabs/zig-duckdb/archive/refs/tags/v0.0.5.tar.gz",
             .hash = "1220fe38df4d196b7aeca68ee6de3f7b36f1424196466038000f7485113cf704f478",
         },
     },

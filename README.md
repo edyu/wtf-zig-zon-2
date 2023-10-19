@@ -143,7 +143,7 @@ This will make more sense in the next sections.
 
 ## B: [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)
 
-The [zig-duckdb](https://github.com/beachglasslabs/duckdb.zig) is still a minimal **Zig** wrapper to [DuckDb](https://duckdb.org). It suits my needs for now and the only changes added since last time are the ability to query for `boolean` and `optional` values.
+The [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb) is still a minimal **Zig** wrapper to [DuckDb](https://duckdb.org). It suits my needs for now and the only changes added since last time are the ability to query for `boolean` and `optional` values.
 
 The big change is that we no longer need to install `libduckdb.so` or `duckdb.h` from [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
@@ -284,15 +284,15 @@ Note the call to `setEnvironmentVariable` because `-L` is only useful for _linki
 
 ## C: my-wtf-project
 
-Now to create the executable for our project, we need to link to the packages A [libduckdb](https://github.com/beachglasslabs/libduckdb) and B [duckdb.zig](https://github.com/beachglasslabs/zig-duckdb).
+Now to create the executable for our project, we need to link to the packages A [libduckdb](https://github.com/beachglasslabs/libduckdb) and B [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
 ## build.zig.zon of C: my-wtf-project
 
-Our only dependency is the release of B: [zig-duckdb](https://github.com/beachglasslabs/duckdb.zig).
+Our only dependency is the release of B: [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
 ```zig
 // build.zig.zon
-// Now we depend on a release of B: duckdb.zig
+// Now we depend on a release of B: zig-duckdb
 .{
     // this is the name of our own project
     .name = "my-wtf-project",
@@ -302,8 +302,8 @@ Our only dependency is the release of B: [zig-duckdb](https://github.com/beachgl
     .dependencies = .{
         // we depend on the duck package described in B
         .duck = .{
-            .url = "https://github.com/beachglasslabs/duckdb.zig/archive/refs/tags/v0.0.1.tar.gz",
-            .hash = "12207c44a5bc996bb969915a5091ca9b70e5bb0f9806827f2e3dd210c946e346a05e",
+            .url = "https://github.com/beachglasslabs/zig-duckdb/archive/refs/tags/v0.0.5.tar.gz",
+            .hash = "1220fe38df4d196b7aeca68ee6de3f7b36f1424196466038000f7485113cf704f478",
         },
     },
 }
@@ -412,7 +412,9 @@ Leaks detected: false
 
 ## The End
 
-You can find the code [here](https://github.com/edyu/wtf-zig-zon2).
+Part 1 is [here](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
+
+You can find the code [here](https://github.com/edyu/wtf-zig-zon-2).
 
 Here are the code for [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb) and [libduckdb](https://github.com/beachglasslabs/libduckdb).
 
