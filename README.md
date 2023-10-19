@@ -1,4 +1,4 @@
-# Zig Package Manager - WTF is Zon 2 (0.11.0 Update)
+# Zig Package Manager 2 - WTF is Build.Zig.Zon and Build.Zig (0.11.0 Update)
 
 The ~~power~~ hack and complexity of **Package Manager** in Zig 0.11.0
 
@@ -32,11 +32,11 @@ As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manage
 
 I just want to reiterate my stance on **Zig** and the _package manager_. I'm not writing this to discourage you from using it but to set the right expectation and hopefully help you in case you encounter similar issues.
 
-**Zig** along with its package manager is being constantly improved and I'm looking forward to the [0.12.0](https://github.com/ziglang/zig/milestone/23).
+**Zig** along with its package manager is being constantly improved and I'm looking forward to the [0.12.0](https://github.com/ziglang/zig/milestone/23) release.
 
-Today, I'll introduce a better hack than what I had to do in June, 2023 and hopefully I can retire my hack in [0.12.0](https://github.com/ziglang/zig/milestone/23).
+Today, I'll introduce a better hack than what I had to do in June, 2023 and hopefully I can retire my hack after the [0.12.0](https://github.com/ziglang/zig/milestone/23) release.
 
-I'll most likely write a follow-up article after [0.12.0](https://github.com/ziglang/zig/milestone/23) is released hopefully by the end of the year.
+I'll most likely write a follow-up article after **Zig** [0.12.0](https://github.com/ziglang/zig/milestone/23) is released hopefully by the end of the year.
 
 I will not reiterate concepts introduced in [Part 1](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), so please read that first if you find this article confusing.
 
