@@ -33,6 +33,7 @@ As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manage
 I just want to reiterate my stance on **Zig** and the _package manager_. I'm not writing this to discourage you from using it but to set the right expectation and hopefully help you in case you encounter similar issues.
 
 **Zig** along with its package manager is being constantly improved and I'm looking forward to the [0.12.0](https://github.com/ziglang/zig/milestone/23).
+
 Today, I'll introduce a better hack than what I had to do in June, 2023 and hopefully I can retire my hack in [0.12.0](https://github.com/ziglang/zig/milestone/23).
 
 I'll most likely write a follow-up article after [0.12.0](https://github.com/ziglang/zig/milestone/23) is released hopefully by the end of the year.
@@ -42,22 +43,35 @@ I will not reiterate concepts introduced in [Part 1](https://zig.news/edyu/zig-p
 ## Package (Manager) vs Library
 
 One of my previous misunderstandings of the package manager was that I was using a **Zig** package as a library.
+
 Let's reuse the example of C -> B -> A in that _program C_ that depended on the _package B_, which in turn depended on _package A_.
+
 The way I was building the _program C_ and _packages B and A_ was that I was basically _copying_ over everything _package A_ produced to _package B_ and then _copied_ over both what _package B_ produced and _package A_ produced to _program C_ as part of the build process.
+
 That was not the correct way to use a package manager because one of the benefits of the package manager is that you only need to concern yourself with the packages you depended on directly without needing to care what that other packages needed they depended on.
+
 In the example of C -> B -> A, _program C_ should only know/care about _package B_ and not needing to care at all that _package B_ needed _package A_ internally because the package manager should have taken care of the transitive dependencies.
+
 In other words, package manager should have good enough encapsulation for packages in that the users should not care about packages not directly required by the main program.
+
 As an example, despite many of the dependency problems, _npm_ does a good job (probably too good a job) of encapsulation.
+
 It's so good that sometimes when you add 1 package, you might be surprised when _npm_ automatically pulls down hundreds of packages because it would recursively download all depenencies.
+
 However, such clean encapsulation is not always possible when we are building native programs in **Zig** especially when shared libraries are involved.
 
 ## Artifact and Module
 
 The main problem I had to deal with was that the **Zig** package manager resolved around the idea of an _artifact_ which requires a _Compile_ step that involves with either compilation and/or linking.
+
 This conceptualization doesn't work well with when we have to deal with a package composed of existing binary library such as a shared library that doesn't require any additional compilation or linking.
+
 Although the **Zig** package manager also has the concept of a _module_ but it is mainly used so that you program can import **Zig** package.
+
 A module is equivalent to a **Zig** library (source code) exposed by the package manager. A _module_ is not useful when you don't your binary library is not written in **Zig**.
+
 For building your program, you need the _artifact_ produced by the dependencies in order to access the specific items produced by such dependencies.
+
 If your package is written in **Zig**, then you can access the **Zig** library in such package as a _module_ and you can access either the shared libarary, static library, or the executable as _artifacts_.
 
 ## The Problem
@@ -71,9 +85,12 @@ B: You would also need to write a wrapper for such library in your native langua
 C: You then would write your program calling the functions provided by the wrapper _B_.
 
 Our concrete example has 3 packages _A_, _B_, and _C_. Our program _my-wtf-project_ is in _package C_, which needs to use [DuckDb](https://duckdb.org) for its database needs.
+
 The project C will use the **Zig** layer provided by _package B_, which in turn will need the actual [DuckDb](https://duckdb.org) implementation provided by _package A_.
 
-For our `my-wtf-project`, our main program will call the **Zig** library provided by [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb). The [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb) is just a **Zig** wrapper of [`libduckdb`](https://github.com/beachglasslabs/libduckdb) that provides the dynamic library of [`release 0.9.1`](https://github.com/duckdb/duckdb/releases/tag/v0.9.1) of [DuckDb](https://duckdb.org). To use the C -> B -> A example in the earlier section, _program C_ is our project `my-wtf-project`, _package B_ is [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb), and _project A_ is [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
+For our `my-wtf-project`, our main program will call the **Zig** library provided by [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb). The [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb) is just a **Zig** wrapper of [`libduckdb`](https://github.com/beachglasslabs/libduckdb) that provides the dynamic library of [`release 0.9.1`](https://github.com/duckdb/duckdb/releases/tag/v0.9.1) of [DuckDb](https://duckdb.org).
+
+To use the C -> B -> A example in the earlier section, _program C_ is our project `my-wtf-project`, _package B_ is [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb), and _project A_ is [`libduckdb`](https://github.com/beachglasslabs/libduckdb).
 
 Note that _package B_ used to be called `duckdb.zig` but it has since been renamed to [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb).
 
@@ -84,7 +101,7 @@ _package B_([`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)), and _
 
 1. In the `build.zig` of [`libduckdb`](https://github.com/beachglasslabs/libduckdb), I had to create an _artifact_ even if the `libduckdb.so` is a shared library that doesn't need additional compilation/linking by creating a new static library that is linked to `libduckdb.so` just so I can use the _artifact_ in
    [`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb).
-   .
+
 2. I had to use `lib.installHeader` to install both the `duckdb.h` and the `libduckdb.so` in all the `build.zig` to copy over these 2 files to `zig-out/include` and `zig-out/lib` respectively.
 
 ## A: [libduckdb](https://github.com/beachglasslabs/libduckdb)
@@ -96,6 +113,7 @@ I unzipped the package and placed `duckdb.h` under the `include` directory and `
 ## build.zig.zon of A: [`libduckdb`](https://github.com/beachglasslabs/libduckdb)
 
 Because [`libduckdb`](https://github.com/beachglasslabs/libduckdb) has no dependencies, the _zon_ file is extremely simple.
+
 It just lists the name and the version. I've intentionally been using the actual version number of the underlying [DuckDb](https://duckdb.org).
 
 ```zig
@@ -230,6 +248,7 @@ _ = b.installLibFile(duck_dep.builder.pathFromRoot(
 ```
 
 If you look into the project, you will see that I introduced a new file called `test.zig` that was meant to test the new `boolean` and `optional` values.
+
 In order to run the test, I've added a new _test_ step in build.zig:
 
 ```zig
@@ -295,6 +314,7 @@ Our only dependency is the release of B: [`zig-duckdb`](https://github.com/beach
 This is somewhat similar to the `build.zig` of B ([`zig-duckdb`](https://github.com/beachglasslabs/zig-duckdb)).
 
 Note once again that we do not need to call `installLibraryHeaders` to install the `libduckdb.so` and `duckdb.h` anymore.
+
 I've also added `setEnvironmentVariable` to set `LD_LIBRARY_PATH` for running the test program.
 
 ```zig
