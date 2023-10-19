@@ -18,41 +18,42 @@ Oct.18.2023
 
 However, due to the power of the language, some of the syntaxes are not obvious for those first coming into the language. I was actually one such person.
 
-Several months ago, when I first tried out the new **Zig** package manager, it was before [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) was officially released. Not only was the language unstable, but also the package manager itself was subject to a lot of stability issues especially with TLS. I had to hack together a system that worked for my need, and I documented my journey in [WTF is Zon](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
+Several months ago, when I first tried out the new **Zig** package manager, it was before **Zig** [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) was officially released. Not only was the language unstable, but also the package manager itself was subject to a lot of stability issues especially with TLS. I had to hack together a system that worked for my need, and I documented my journey in [Zig Package Manager - WTF is Zon](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
 
-Since then I've had discussion of the **Zig** _package manager_ with [Andrew](https://github.com/andrewrk) and various others through the [Zig Discord](https://discord.com/servers/zig-programming-language-605571803288698900), [Ziggit](https://ziggit.dev), and even a [Github issue](https://github.com/ziglang/zig/issues/16172).
+Since then I've had discussion of the **Zig** _package manager_ with [Andrew](https://github.com/andrewrk) and various others through the [Zig Discord](https://discord.com/servers/zig-programming-language-605571803288698900), [Ziggit](https://ziggit.dev), and even opened up a [Github issue](https://github.com/ziglang/zig/issues/16172).
 
-Now that **Zig** has released [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) in August 2023, and many of the problems were resolved so I want to revisit my hack to see whether I can do a better _hack_.
+Now that **Zig** has released [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) in August 2023, and many of the stability problems were resolved so I want to revisit my hack to see whether I can do a better _hack_.
 
 A special shoutout to my friend [InKryption](https://github.com/inkryption), who was tremendously helpful in my understanding of the _package manager_. I wouldn't be able to come up with this better hack without his help.
 
 ## Disclaimer
 
-As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), I changed my typical subtitle of _power and complexity_ to _hack and complexity_ because not only was [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) (hence the package manager) not released yet but also I had do a pretty ugly [hack](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e#provide-a-package) to make it work.
+As I mentioned in my [previous article](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), I changed my typical subtitle of _power and complexity_ to _hack and complexity_ because not only was **Zig** [0.11.0](https://github.com/ziglang/zig/releases/tag/0.11.0) (which first introduced the package manager) not released yet but also I had to do a pretty ugly [hack](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e#provide-a-package) to make it work.
 
 I just want to reiterate my stance on **Zig** and the _package manager_. I'm not writing this to discourage you from using it but to set the right expectation and hopefully help you in case you encounter similar issues.
 
 **Zig** along with its package manager is being constantly improved and I'm looking forward to the [0.12.0](https://github.com/ziglang/zig/milestone/23) release.
 
-Today, I'll introduce a better hack than what I had to do in June, 2023 and hopefully I can retire my hack after the [0.12.0](https://github.com/ziglang/zig/milestone/23) release.
+Today, I'll introduce a better hack than what I had to do in June, 2023 and ideally I can retire my hack after the [0.12.0](https://github.com/ziglang/zig/milestone/23) release.
 
-I'll most likely write a follow-up article after **Zig** [0.12.0](https://github.com/ziglang/zig/milestone/23) is released hopefully by the end of the year.
+I'll most likely write a follow-up article once **Zig** [0.12.0](https://github.com/ziglang/zig/milestone/23) is released (hopefully) by the end of the year.
 
 I will not reiterate concepts introduced in [Part 1](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e), so please read that first if you find this article confusing.
 
-## Package (Manager) vs Library
+## Package (Manager) vs Binary Library
 
 One of my previous misunderstandings of the package manager was that I was using a **Zig** package as a library.
 
-Let's reuse the example of C -> B -> A in that _program C_ that depended on the _package B_, which in turn depended on _package A_.
+Let's reuse the same example of C -> B -> A from [Part 1](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e)
+in that our _program C_ depended on _package B_, which in turn depended on _package A_.
 
-The way I was building the _program C_ and _packages B and A_ was that I was basically _copying_ over everything _package A_ produced to _package B_ and then _copied_ over both what _package B_ produced and _package A_ produced to _program C_ as part of the build process.
+The way I was building the _program C_ and _packages B and A_ was that I was basically _copying_ over everything _package A_ produced to _package B_ and then _copied_ over both what _package B_ produced and _package A_ produced to _program C_ as part of the build process. The thing that was produced is called an *artifact* in **Zig** package manager.
 
-That was not the correct way to use a package manager because one of the benefits of the package manager is that you only need to concern yourself with the packages you depended on directly without needing to care what that other packages needed they depended on.
+That was not the correct way to use a package manager because one of the benefits of a package manager is that you only need to concern yourself with the packages you depended on directly without needing to care about the additional packages those direct packages depended on themselves.
 
 In the example of C -> B -> A, _program C_ should only know/care about _package B_ and not needing to care at all that _package B_ needed _package A_ internally because the package manager should have taken care of the transitive dependencies.
 
-In other words, package manager should have good enough encapsulation for packages in that the users should not care about packages not directly required by the main program.
+In other words, package manager should have good enough encapsulation for packages so that the users need not care about packages not directly required by the main (their own) programs.
 
 As an example, despite many of the dependency problems, _npm_ does a good job (probably too good a job) of encapsulation.
 
@@ -60,25 +61,26 @@ It's so good that sometimes when you add 1 package, you might be surprised when 
 
 However, such clean encapsulation is not always possible when we are building native programs in **Zig** especially when shared libraries are involved.
 
-## Artifact and Module
+## Artifact vs Module
 
-The main problem I had to deal with was that the **Zig** package manager resolved around the idea of an _artifact_ which requires a _Compile_ step that involves with either compilation and/or linking.
+In addition to *artifacts*, the **Zig** package manager also has the concept of a _module_ but it is mainly referring to **Zig** source code and is primary used so that your program can import the **Zig** package as a library.
 
-This conceptualization doesn't work well with when we have to deal with a package composed of existing binary library such as a shared library that doesn't require any additional compilation or linking.
+A module is equivalent to a **Zig** library (source code) exposed by the package manager. A _module_ is not useful when the binary library you depend on is not written in **Zig**.
 
-Although the **Zig** package manager also has the concept of a _module_ but it is mainly used so that you program can import **Zig** package.
+When building your program, you need access to the _artifact_ produced by the dependency in order to access the specific items produced by such dependency.
 
-A module is equivalent to a **Zig** library (source code) exposed by the package manager. A _module_ is not useful when you don't your binary library is not written in **Zig**.
+To summarize, if your package is written in **Zig**, then you can access the **Zig** code in such package as a _module_ and you can access either the shared libarary, static library, or the executable produced by such package as _artifacts_. However, if your package is not written in **Zig**, then you need to do some additional work to expose the code/library as a *module* and expose the resulting items as part of the *artifact*.
 
-For building your program, you need the _artifact_ produced by the dependencies in order to access the specific items produced by such dependencies.
+The main problem I had to deal with was that the **Zig** package manager resolved around the idea of an _artifact_ which requires a _Compile_ step that is involved with either a compilation and/or linking step. As stated earlier, an *artifact* is the stuff that was produced as part of the *build* process. Where this falls apart is when we need to package together items that do not require a *build* (*Compile*) step.
 
-If your package is written in **Zig**, then you can access the **Zig** library in such package as a _module_ and you can access either the shared libarary, static library, or the executable as _artifacts_.
+Hence, the existing *artifact* conceptualization doesn't work well with when we have to deal with a package composed of an existing binary library such as a shared library that doesn't require any additional compilation or linking. Note that this can be the case even if you have the source code because you may not want to compile the source code yourself if the project releases binary packages as part of its releases.
+
 
 ## The Problem
 
 I'll reintroduce the problem mentioned in [Part 1](https://zig.news/edyu/zig-package-manager-wtf-is-zon-558e).
 
-The scenario is common in a project that uses a package written in a different language from your main project:
+The scenario is quite common in projects that uses packages written in a different language from the main project:
 
 A: You often would need the shared or static library from the package written in another language compiled for your environment (such as **Linux**).
 B: You would also need to write a wrapper for such library in your native language.
@@ -94,7 +96,7 @@ To use the C -> B -> A example in the earlier section, _program C_ is our projec
 
 Note that _package B_ used to be called `duckdb.zig` but it has since been renamed to [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
-## The Hack
+## The Hack in Part 1
 
 There are two hacks I had to do for the `build.zig` of _package A_([libduckdb](https://github.com/beachglasslabs/libduckdb)),
 _package B_([zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)), and _program C_(_my-wtf-project_):
@@ -102,7 +104,15 @@ _package B_([zig-duckdb](https://github.com/beachglasslabs/zig-duckdb)), and _pr
 1. In the `build.zig` of [libduckdb](https://github.com/beachglasslabs/libduckdb), I had to create an _artifact_ even if the `libduckdb.so` is a shared library that doesn't need additional compilation/linking by creating a new static library that is linked to `libduckdb.so` just so I can use the _artifact_ in
    [zig-duckdb](https://github.com/beachglasslabs/zig-duckdb).
 
-2. I had to use `lib.installHeader` to install both the `duckdb.h` and the `libduckdb.so` in all the `build.zig` to copy over these 2 files to `zig-out/include` and `zig-out/lib` respectively.
+2. I had to use `Build.installHeader` to install both the `duckdb.h` and the `libduckdb.so` in all the `build.zig` to copy over these 2 files to `zig-out/include` and `zig-out/lib` respectively.
+
+## The New Hack
+
+I'm still calling this a hack because as stated, a *module* is mainly used to refer to **Zig** source code that can be used as a library to be imported by your program. Just like how a shared library is not meant to be installed via calls to install header files, a *module* is meant to be used to refer to individual *artifacts* in a package. However, this is exactly what I had to do.
+
+I believe this is better than how I was using `Build.installHeader` and `Build.installLibraryHeader` to install *artifacts* produced by dependencies.
+
+A big benefit of using the *module* to refer to *non-Zig-produced* *artifacts* is that we do not need to *copy* over *artifacts* from the dependencies anymore.
 
 ## A: [libduckdb](https://github.com/beachglasslabs/libduckdb)
 
